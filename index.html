@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Lucky Spin Game</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #f4f5f7; padding-bottom: 70px; user-select: none; }
+        
+        /* --- হেডার --- */
+        .header { background: linear-gradient(135deg, #e53935, #c62828); color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px; box-shadow: 0 5px 15px rgba(229, 57, 53, 0.3); position: sticky; top: 0; z-index: 100; }
+        .logo { font-size: 22px; font-weight: 900; letter-spacing: 1px; text-shadow: 1px 1px 2px rgba(0,0,0,0.2); }
+        .logo span { color: #ffca28; }
+        .balance { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5); padding: 6px 15px; border-radius: 20px; font-weight: bold; font-size: 15px; display: flex; align-items: center; gap: 5px; }
+
+        /* --- হোম স্ক্রিন --- */
+        .screen { display: none; animation: fadeIn 0.3s ease; }
+        .screen.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* ব্যানার */
+        .banner { margin: 15px; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); background: linear-gradient(45deg, #ff9800, #ff5722); padding: 25px 20px; text-align: center; color: white; position: relative; }
+        .banner h2 { font-size: 24px; margin-bottom: 8px; }
+        .banner p { font-size: 14px; opacity: 0.9; }
+
+        /* মেনু গ্রিড */
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 0 15px 20px; }
+        .card { background: white; border-radius: 16px; padding: 20px 15px; text-align: center; box-shadow: 0 3px 10px rgba(0,0,0,0.06); cursor: pointer; transition: all 0.2s; border: 1px solid #f0f0f0; }
+        .card:active { transform: scale(0.95); background: #f9f9f9; }
+        .card .icon { font-size: 32px; margin-bottom: 10px; }
+        .card .title { font-weight: bold; color: #333; font-size: 16px; margin-bottom: 4px; }
+        .card .subtitle { font-size: 12px; color: #888; }
+
+        /* --- স্পিন স্ক্রিন --- */
+        .spin-screen { padding: 20px; text-align: center; display: flex; flex-direction: column; align-items: center; }
+        .back-btn { align-self: flex-start; background: white; border: 1px solid #ddd; color: #333; padding: 8px 16px; border-radius: 10px; cursor: pointer; font-weight: bold; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        
+        /* হুইল ডিজাইন */
+        .wheel-container { position: relative; width: 300px; height: 300px; margin: 10px auto 30px; }
+        .wheel-outer { width: 100%; height: 100%; border-radius: 50%; border: 10px solid #c62828; background: #fff; box-shadow: 0 0 25px rgba(198, 40, 40, 0.4), inset 0 0 10px rgba(0,0,0,0.2); position: relative; overflow: hidden; transition: transform 5s cubic-bezier(0.1, 0.7, 0.1, 1); }
+        
+        /* হুইলের সেগমেন্ট */
+        .segment { position: absolute; width: 50%; height: 50%; transform-origin: 100% 100%; border: 1px solid #eee; }
+        .segment:nth-child(odd) { background: #fff; }
+        .segment:nth-child(even) { background: #ffebee; }
+        .segment-text { position: absolute; left: 25%; top: 25%; font-weight: 900; font-size: 16px; color: #c62828; }
+
+        /* পয়েন্টার (তীর) */
+        .pointer { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); width: 50px; height: 60px; z-index: 10; display: flex; flex-direction: column; align-items: center; }
+        .pointer-triangle { width: 0; height: 0; border-left: 20px solid transparent; border-right: 20px solid transparent; border-top: 40px solid #c62828; filter: drop-shadow(0 3px 3px rgba(0,0,0,0.3)); }
+        .pointer-circle { width: 20px; height: 20px; background: #c62828; border-radius: 50%; margin-top: -5px; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+
+        /* স্পিন বাটন */
+        .spin-btn { background: linear-gradient(135deg, #e53935, #c62828); color: white; border: none; padding: 16px 50px; font-size: 20px; font-weight: bold; border-radius: 35px; cursor: pointer; box-shadow: 0 6px 15px rgba(198, 40, 40, 0.4); transition: 0.2s; width: 80%; max-width: 300px; }
+        .spin-btn:active { transform: scale(0.95); }
+        .spin-btn:disabled { background: #ccc; box-shadow: none; cursor: not-allowed; transform: none; }
+        .spins-left { margin-top: 15px; font-size: 14px; color: #666; font-weight: bold; }
+
+        /* --- বটম নেভিগেশন --- */
+        .bottom-nav { position: fixed; bottom: 0; width: 100%; background: white; display: flex; justify-content: space-around; padding: 10px 0 15px; box-shadow: 0 -2px 15px rgba(0,0,0,0.05); z-index: 100; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; color: #888; font-size: 11px; cursor: pointer; transition: 0.2s; width: 20%; }
+        .nav-item.active { color: #e53935; font-weight: bold; }
+        .nav-item .icon { font-size: 22px; margin-bottom: 4px; }
+
+        /* --- টোস্ট মেসেজ --- */
+        .toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.85); color: white; padding: 15px 30px; border-radius: 12px; font-size: 16px; font-weight: bold; z-index: 999; display: none; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); backdrop-filter: blur(5px); }
+    </style>
+</head>
+<body>
+
+    <!-- হেডার -->
+    <div class="header">
+        <div class="logo">LUCKY<span>SPIN</span></div>
+        <div class="balance">💰 <span id="coinDisplay">0</span></div>
+    </div>
+
+    <!-- ১. হোম স্ক্রিন -->
+    <div id="homeScreen" class="screen active">
+        <div class="banner">
+            <h2>স্বাগতম!</h2>
+            <p>স্পিন করুন, পয়েন্ট জমান এবং টাকা তুলুন</p>
+        </div>
+
+        <div class="grid">
+            <div class="card" onclick="openSpinScreen()">
+                <div class="icon">🎡</div>
+                <div class="title">লাকি স্পিন</div>
+                <div class="subtitle">ফ্রি স্পিন করুন</div>
+            </div>
+            <div class="card" onclick="showToast('শীঘ্রই আসছে!')">
+                <div class="icon">🎁</div>
+                <div class="title">দৈনিক বোনাস</div>
+                <div class="subtitle">প্রতিদিন চেক-ইন</div>
+            </div>
+            <div class="card" onclick="showToast('শীঘ্রই আসছে!')">
+                <div class="icon">🎬</div>
+                <div class="title">ভিডিও দেখুন</div>
+                <div class="subtitle">বিজ্ঞাপন দেখে আয়</div>
+            </div>
+            <div class="card" onclick="showToast('শীঘ্রই আসছে!')">
+                <div class="icon">👥</div>
+                <div class="title">বন্ধুকে রেফার</div>
+                <div class="subtitle">রেফারে ৫০০ পয়েন্ট</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ২. স্পিন স্ক্রিন -->
+    <div id="spinScreen" class="screen spin-screen">
+        <button class="back-btn" onclick="goHome()">← ফিরে যান</button>
+        
+        <h2 style="color: #c62828; margin-bottom: 20px; font-size: 24px;">লাকি স্পিন</h2>
+        
+        <div class="wheel-container">
+            <div class="pointer">
+                <div class="pointer-circle"></div>
+                <div class="pointer-triangle"></div>
+            </div>
+            <!-- হুইলটি জাভাস্ক্রিপ্ট দিয়ে তৈরি করা হবে -->
+            <div class="wheel-outer" id="wheel"></div>
+        </div>
+
+        <button class="spin-btn" id="spinBtn" onclick="startSpin()">স্পিন করুন</button>
+        <div class="spins-left" id="spinsLeft">আজকের স্পিন বাকি আছে: ৩ বার</div>
+    </div>
+
+    <!-- বটম নেভিগেশন -->
+    <div class="bottom-nav">
+        <div class="nav-item active" onclick="switchTab('home', this)">
+            <div class="icon">🏠</div>
+            <div>হোম</div>
+        </div>
+        <div class="nav-item" onclick="showToast('শীঘ্রই আসছে!')">
+            <div class="icon">🤝</div>
+            <div>রেফার</div>
+        </div>
+        <div class="nav-item" onclick="showToast('শীঘ্রই আসছে!')">
+            <div class="icon">🎁</div>
+            <div>প্রোমোশন</div>
+        </div>
+        <div class="nav-item" onclick="showToast('শীঘ্রই আসছে!')">
+            <div class="icon">🎧</div>
+            <div>সেবা</div>
+        </div>
+        <div class="nav-item" onclick="showToast('শীঘ্রই আসছে!')">
+            <div class="icon">👤</div>
+            <div>প্রোফাইল</div>
+        </div>
+    </div>
+
+    <!-- টোস্ট মেসেজ -->
+    <div id="toast" class="toast"></div>
+
+    <script>
+        // ==========================================
+        // গেমের ডাটা এবং কনফিগারেশন
+        // ==========================================
+        let coins = 0;
+        let spinsAvailable = 3;
+        let isSpinning = false;
+        
+        // হুইলের পুরস্কারসমূহ (যেকোনো সংখ্যক ডাটা দেওয়া যাবে)
+        const prizes = [10, 50, 100, 20, 0, 500, 50, 200];
+        const colors = ['#ffebee', '#fff', '#ffcdd2', '#fff', '#ffebee', '#fff', '#ffcdd2', '#fff'];
+
+        // ==========================================
+        // হুইল তৈরি করা (DOM Manipulation)
+        // ==========================================
+        function createWheel() {
+            const wheel = document.getElementById('wheel');
+            const anglePerSegment = 360 / prizes.length;
+
+            prizes.forEach((prize, index) => {
+                const segment = document.createElement('div');
+                segment.className = 'segment';
+                
+                // সেগমেন্টের রোটেশন এবং কালার সেট করা
+                segment.style.transform = `rotate(${index * anglePerSegment}deg) skewY(${90 - anglePerSegment}deg)`;
+                segment.style.background = colors[index];
+                
+                // টেক্সট পজিশন করা
+                const text = document.createElement('div');
+                text.className = 'segment-text';
+                text.innerText = prize;
+                // skewY এর প্রভাব কাটানোর জন্য টেক্সট রোটেট করা
+                text.style.transform = `skewY(-${90 - anglePerSegment}deg) rotate(${anglePerSegment / 2}deg) translate(40px, 10px)`;
+                
+                segment.appendChild(text);
+                wheel.appendChild(segment);
+            });
+        }
+
+        // ==========================================
+        // স্পিন করার লজিক
+        // ==========================================
+        function startSpin() {
+            if (isSpinning || spinsAvailable <= 0) return;
+
+            isSpinning = true;
+            spinsAvailable--;
+            document.getElementById('spinBtn').disabled = true;
+            document.getElementById('spinsLeft').innerText = `আজকের স্পিন বাকি আছে: ${spinsAvailable} বার`;
+
+            const wheel = document.getElementById('wheel');
+            
+            // র‍্যান্ডম রেজাল্ট সিলেক্ট করা
+            const randomIndex = Math.floor(Math.random() * prizes.length);
+            const winningAmount = prizes[randomIndex];
+
+            // রোটেশন ক্যালকুলেশন (কমপক্ষে ৫ বার ঘুরবে)
+            const anglePerSegment = 360 / prizes.length;
+            // পয়েন্টারটি উপরে (0 ডিগ্রি) থাকে, তাই সঠিক সেগমেন্টে থামানোর জন্য ক্যালকুলেশন
+            const targetAngle = 3600 + (360 - (randomIndex * anglePerSegment) - (anglePerSegment / 2));
+
+            // আগের রোটেশন রিসেট করা
+            wheel.style.transition = 'none';
+            wheel.style.transform = `rotate(0deg)`;
+
+            // সামান্য ডিলে দিয়ে আবার স্পিন শুরু করা
+            setTimeout(() => {
+                wheel.style.transition = 'transform 5s cubic-bezier(0.1, 0.7, 0.1, 1)';
+                wheel.style.transform = `rotate(${targetAngle}deg)`;
+            }, 50);
+
+            // ৫ সেকেন্ড পর রেজাল্ট দেখানো
+            setTimeout(() => {
+                isSpinning = false;
+                
+                if (winningAmount > 0) {
+                    coins += winningAmount;
+                    updateBalance();
+                    showToast(`🎉 অভিনন্দন!\nআপনি ${winningAmount} পয়েন্ট পেয়েছেন।`);
+                } else {
+                    showToast(`😢 দুঃখিত!\nএবার আপনি কিছু পাননি।`);
+                }
+
+                // স্পিন শেষ হলে বাটন চেক
+                if (spinsAvailable > 0) {
+                    document.getElementById('spinBtn').disabled = false;
+                } else {
+                    document.getElementById('spinBtn').innerText = "আগামীকাল আবার আসুন";
+                }
+            }, 5100);
+        }
+
+        // ==========================================
+        // ইউটিলিটি ফাংশনসমূহ
+        // ==========================================
+        function updateBalance() {
+            document.getElementById('coinDisplay').innerText = coins;
+        }
+
+        function openSpinScreen() {
+            document.getElementById('homeScreen').classList.remove('active');
+            document.getElementById('spinScreen').classList.add('active');
+        }
+
+        function goHome() {
+            document.getElementById('spinScreen').classList.remove('active');
+            document.getElementById('homeScreen').classList.add('active');
+            // বটম নেভিগেশনে হোম অ্যাক্টিভ করা
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item')[0].classList.add('active');
+        }
+
+        function switchTab(tabName, element) {
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+            
+            if (tabName === 'home') {
+                goHome();
+            }
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.innerText = message;
+            toast.style.display = 'block';
+            
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 3000);
+        }
+
+        // ==========================================
+        // অ্যাপ চালু করা
+        // ==========================================
+        window.onload = () => {
+            createWheel();
+            updateBalance();
+        };
+    </script>
+</body>
+</html>
